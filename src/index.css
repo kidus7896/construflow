@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0F172A;
+  --color-card: #1E293B;
+  --color-primary: #3B82F6;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-text: #F1F5F9;
+  --color-muted: #94A3B8;
+  --color-border: #334155;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+input, select, textarea {
+  outline: none;
+}
+
+input:focus, select:focus, textarea:focus {
+  --tw-ring-color: var(--color-primary);
+}
