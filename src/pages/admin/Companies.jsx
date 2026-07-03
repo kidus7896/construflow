@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useStore } from '../../store/useStore'
-import { useAuth } from '../../context/AuthContext'
 import { generateId } from '../../utils/format'
 import { Search, Plus, Eye, Edit3, Trash2, Ban, CheckCircle, LogIn, Archive, X, RefreshCw, Download } from 'lucide-react'
 
@@ -9,7 +8,6 @@ const businessTypes = ['Construction', 'Real Estate', 'Engineering', 'Mining', '
 
 export default function AdminCompanies() {
   const { data, addCompany, editCompany, deleteCompany, archiveCompany, addActivityLog } = useStore()
-  const { user } = useAuth()
   const [companies, setCompanies] = useState([])
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -60,10 +58,10 @@ export default function AdminCompanies() {
     const payload = { ...form, storageLimit: Number(form.storageLimit), maxUsers: Number(form.maxUsers), maxCompanies: Number(form.maxCompanies) }
     if (editing) {
       editCompany(editing, payload)
-      addActivityLog('company_updated', `Updated company: ${form.name}`, user?.id)
+      addActivityLog('company_updated', `Updated company: ${form.name}`)
     } else {
       addCompany({ ...payload, id: generateId(), createdAt: new Date().toISOString() })
-      addActivityLog('company_created', `Created company: ${form.name}`, user?.id)
+      addActivityLog('company_created', `Created company: ${form.name}`)
     }
     setShowModal(false)
     resetForm()
@@ -71,13 +69,13 @@ export default function AdminCompanies() {
 
   function handleStatus(company, status) {
     editCompany(company.id, { ...company, status })
-    addActivityLog(`company_${status}`, `${company.name} ${status}`, user?.id)
+    addActivityLog(`company_${status}`, `${company.name} ${status}`)
   }
 
   function handleDelete(company) {
     if (!confirm(`Delete company "${company.name}"? This will remove all associated data.`)) return
     deleteCompany(company.id)
-    addActivityLog('company_deleted', `Deleted company: ${company.name}`, user?.id)
+    addActivityLog('company_deleted', `Deleted company: ${company.name}`)
   }
 
   function handleReset(company) {
@@ -92,7 +90,7 @@ export default function AdminCompanies() {
       stored[key] = (stored[key] || []).filter(e => e.companyId !== company.id)
     })
     localStorage.setItem('construction_flow_data', JSON.stringify(stored))
-    addActivityLog('company_reset', `Reset company data: ${company.name}`, user?.id)
+    addActivityLog('company_reset', `Reset company data: ${company.name}`)
     window.location.reload()
   }
 
@@ -101,7 +99,7 @@ export default function AdminCompanies() {
     const admin = users.find(u => u.companyId === company.id && u.role === 'company_admin')
     if (admin) {
       localStorage.setItem('cf_session', JSON.stringify({ email: admin.email }))
-      addActivityLog('company_login_as', `Logged in as ${company.name}`, user?.id)
+      addActivityLog('company_login_as', `Logged in as ${company.name}`)
       window.location.href = '/'
     } else {
       alert('No company admin found for this company. Create a user with Company Admin role first.')

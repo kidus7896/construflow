@@ -1,21 +1,16 @@
-import { NavLink, useLocation } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { logoutUser } from '../services/authService'
 import {
   LayoutDashboard, Banknote, FileText, FileSpreadsheet,
   Truck, BarChart3, History, Settings, X, LogOut,
-  Fuel, Wrench, HardHat, MoreHorizontal, ChevronDown, Package, Building2, UserCircle, Shield
+  MoreHorizontal, ChevronDown, Package, Building2, UserCircle
 } from 'lucide-react'
-import CompanySwitcher from './CompanySwitcher'
 
 const otherExpensesLinks = [
   { to: '/aggregate-expenses', label: 'Aggregate Expenses', icon: Package },
   { to: '/transport-expenses', label: 'Transport Expenses', icon: Truck },
-  { to: '/fuel-expenses', label: 'Fuel Expenses', icon: Fuel },
-  { to: '/equipment-rental', label: 'Equipment Rental', icon: Wrench },
-  { to: '/machinery-maintenance', label: 'Machinery Maintenance', icon: HardHat },
-  { to: '/site-expenses', label: 'Site Expenses', icon: HardHat },
   { to: '/miscellaneous-expenses', label: 'Miscellaneous Expenses', icon: MoreHorizontal },
 ]
 
@@ -28,31 +23,18 @@ const links = [
   { to: '/transaction-history', label: 'Transaction History', icon: History },
   { to: '/companies', label: 'Companies', icon: Building2 },
   { to: '/settings', label: 'Settings', icon: Settings },
-  { to: '/sessions', label: 'Active Sessions', icon: Shield },
-]
-
-const employeeLinks = [
-  { to: '/user-dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/payments', label: 'Payments', icon: Banknote },
-  { to: '/vat-reports', label: 'VAT Reports', icon: FileText },
-  { to: '/withholding-reports', label: 'Withholding Reports', icon: FileSpreadsheet },
-  { to: '/financial-statements', label: 'Financial Statements', icon: BarChart3 },
-  { to: '/transaction-history', label: 'Transaction History', icon: History },
 ]
 
 export default function Sidebar({ open, onClose }) {
-  const { user, logout, ROLES } = useAuth()
+  const { profile } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [expensesOpen, setExpensesOpen] = useState(
     otherExpensesLinks.some(l => location.pathname.startsWith(l.to))
   )
 
-  const isEmployee = user?.role && ![ROLES.SUPER_ADMIN, ROLES.COMPANY_ADMIN].includes(user.role)
-  const navLinks = isEmployee ? employeeLinks : links
-
   async function handleLogout() {
-    await logout()
+    await logoutUser()
     navigate('/login', { replace: true })
   }
 
@@ -78,15 +60,14 @@ export default function Sidebar({ open, onClose }) {
               <X size={18} />
             </button>
           </div>
-          {!isEmployee && <CompanySwitcher onClose={onClose} />}
         </div>
         <div className="flex flex-col h-[calc(100%-60px)]">
           <nav className="p-2 space-y-1 flex-1 overflow-y-auto">
-            {navLinks.map(l => (
+            {links.map(l => (
               <NavLink
                 key={l.to}
                 to={l.to}
-                end={l.to === '/' || l.to === '/user-dashboard'}
+                end={l.to === '/'}
                 onClick={onClose}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
@@ -98,47 +79,46 @@ export default function Sidebar({ open, onClose }) {
                 {l.label}
               </NavLink>
             ))}
-            {!isEmployee && (
-              <div className="pt-2">
-                <button
-                  onClick={() => setExpensesOpen(!expensesOpen)}
-                  className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                    isOtherExpensesActive() ? 'text-primary' : 'text-muted hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Package size={18} />
-                    <span>Other Expenses</span>
-                  </div>
-                  <ChevronDown size={16} className={`transition-transform ${expensesOpen ? '' : '-rotate-90'}`} />
-                </button>
-                {expensesOpen && (
-                  <div className="ml-4 mt-1 space-y-1 border-l border-border pl-2">
-                    {otherExpensesLinks.map(l => (
-                      <NavLink
-                        key={l.to}
-                        to={l.to}
-                        onClick={onClose}
-                        className={({ isActive }) =>
-                          `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                            isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:text-white hover:bg-white/5'
-                          }`
-                        }
-                      >
-                        <l.icon size={16} />
-                        {l.label}
-                      </NavLink>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="pt-2">
+              <button
+                onClick={() => setExpensesOpen(!expensesOpen)}
+                className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                  isOtherExpensesActive() ? 'text-primary' : 'text-muted hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Package size={18} />
+                  <span>Other Expenses</span>
+                </div>
+                <ChevronDown size={16} className={`transition-transform ${expensesOpen ? '' : '-rotate-90'}`} />
+              </button>
+              {expensesOpen && (
+                <div className="ml-4 mt-1 space-y-1 border-l border-border pl-2">
+                  {otherExpensesLinks.map(l => (
+                    <NavLink
+                      key={l.to}
+                      to={l.to}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                          isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:text-white hover:bg-white/5'
+                        }`
+                      }
+                    >
+                      <l.icon size={16} />
+                      {l.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
           </nav>
           <div className="border-t border-border p-3 space-y-2">
-            <div className="flex items-center gap-2 px-3">
-              <UserCircle size={16} className="text-muted" />
-              <span className="text-xs text-muted truncate">{user?.name || user?.email}</span>
-            </div>
+            <NavLink to="/profile" onClick={onClose}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-muted hover:text-white hover:bg-white/5 transition-colors">
+              <UserCircle size={16} />
+              <span className="truncate">{profile?.fullName || profile?.email || 'User'}</span>
+            </NavLink>
             <button onClick={handleLogout} className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-muted hover:text-danger hover:bg-danger/10 transition-colors">
               <LogOut size={18} /> Sign Out
             </button>

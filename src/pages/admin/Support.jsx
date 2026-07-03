@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useStore } from '../../store/useStore'
-import { useAuth } from '../../context/AuthContext'
 import { LifeBuoy, Search, MessageSquare, CheckCircle, Clock, X, Plus, Eye, Edit3, Send, UserCircle } from 'lucide-react'
 
 const tabs = [
@@ -13,7 +12,6 @@ const tabs = [
 
 export default function AdminSupport() {
   const { data, addSupportTicket, updateSupportTicket, deleteSupportTicket } = useStore()
-  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('all')
   const [search, setSearch] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -43,9 +41,9 @@ export default function AdminSupport() {
   function handleSave(e) {
     e.preventDefault()
     if (editing) {
-      updateSupportTicket(editing, { ...form, updatedBy: user?.id })
+      updateSupportTicket(editing, { ...form, updatedBy: 'admin' })
     } else {
-      addSupportTicket({ ...form, createdBy: user?.id, companyId: form.companyId || null })
+      addSupportTicket({ ...form, createdBy: 'admin', companyId: form.companyId || null })
     }
     setShowModal(false)
     resetForm()
@@ -113,10 +111,10 @@ export default function AdminSupport() {
                   <button onClick={() => setViewing(ticket)} className="p-1.5 text-muted hover:text-white hover:bg-white/5 rounded-lg" title="View"><Eye size={16} /></button>
                   <button onClick={() => openEdit(ticket)} className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-lg" title="Edit"><Edit3 size={16} /></button>
                   {ticket.status !== 'resolved' && ticket.status !== 'closed' ? (
-                    <button onClick={() => updateSupportTicket(ticket.id, { status: 'resolved', updatedBy: user?.id })} className="p-1.5 text-muted hover:text-success hover:bg-success/10 rounded-lg" title="Resolve"><CheckCircle size={16} /></button>
+                    <button onClick={() => updateSupportTicket(ticket.id, { status: 'resolved', updatedBy: 'admin' })} className="p-1.5 text-muted hover:text-success hover:bg-success/10 rounded-lg" title="Resolve"><CheckCircle size={16} /></button>
                   ) : null}
                   {ticket.status !== 'closed' ? (
-                    <button onClick={() => updateSupportTicket(ticket.id, { status: 'closed', updatedBy: user?.id })} className="p-1.5 text-muted hover:text-muted hover:bg-white/5 rounded-lg" title="Close"><X size={16} /></button>
+                    <button onClick={() => updateSupportTicket(ticket.id, { status: 'closed', updatedBy: 'admin' })} className="p-1.5 text-muted hover:text-muted hover:bg-white/5 rounded-lg" title="Close"><X size={16} /></button>
                   ) : null}
                   <button onClick={() => { if (confirm('Delete this ticket?')) deleteSupportTicket(ticket.id) }} className="p-1.5 text-muted hover:text-danger hover:bg-danger/10 rounded-lg" title="Delete"><X size={16} /></button>
                 </div>

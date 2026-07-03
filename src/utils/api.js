@@ -1,33 +1,4 @@
-import { authClient } from '../firebase'
-
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
-
-export function setTokens(token) {
-  if (token) localStorage.setItem('cf_access_token', token)
-  else localStorage.removeItem('cf_access_token')
-}
-
-export function clearTokens() {
-  localStorage.removeItem('cf_access_token')
-  localStorage.removeItem('cf_refresh_token')
-  localStorage.removeItem('cf_session_user')
-}
-
-export function getAccessToken() {
-  return localStorage.getItem('cf_access_token')
-}
-
-async function getValidToken() {
-  const fbUser = authClient.currentUser
-  if (!fbUser) return null
-  try {
-    const token = await fbUser.getIdToken()
-    setTokens(token)
-    return token
-  } catch {
-    return null
-  }
-}
 
 function bodyAsText(res) {
   try { return res.text() } catch { return '' }
@@ -39,23 +10,11 @@ function parseJson(text) {
 
 export async function api(endpoint, options = {}) {
   try {
-    const { method = 'GET', body: requestBody, auth = true } = options
-    const headers = {}
-
-    if (auth) {
-      const token = await getValidToken()
-      if (token) headers['Authorization'] = `Bearer ${token}`
-    }
-
-    headers['Content-Type'] = 'application/json'
+    const { method = 'GET', body: requestBody, headers: extraHeaders = {} } = options
+    const headers = { 'Content-Type': 'application/json', ...extraHeaders }
     const rawBody = requestBody ? JSON.stringify(requestBody) : undefined
 
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-      method,
-      headers,
-      body: rawBody,
-    })
-
+    const res = await fetch(`${API_BASE}${endpoint}`, { method, headers, body: rawBody })
     const text = await bodyAsText(res)
     const isJson = res.headers.get('content-type')?.includes('application/json')
     const data = isJson ? parseJson(text) : {}

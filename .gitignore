@@ -13,6 +13,9 @@ dist-ssr
 *.local
 .env
 firebase-service-account.json
+data/
+dist.zip
+*.db
 
 # Editor directories and files
 .vscode/*

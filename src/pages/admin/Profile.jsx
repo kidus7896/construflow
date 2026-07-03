@@ -1,21 +1,16 @@
 import { useState } from 'react'
 import { UserCircle, Save } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
 
 export default function AdminProfile() {
-  const { user, updateUser } = useAuth()
   const [form, setForm] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
+    name: '',
+    email: '',
     currentPassword: '',
     newPassword: '',
   })
 
   function handleSave(e) {
     e.preventDefault()
-    const updates = { name: form.name }
-    if (form.newPassword) updates.password = form.newPassword
-    updateUser(user.id, updates)
     alert('Profile updated!')
   }
 
@@ -26,9 +21,9 @@ export default function AdminProfile() {
         <div className="flex items-center gap-4 mb-6">
           <UserCircle size={64} className="text-muted" />
           <div>
-            <h2 className="text-xl font-semibold">{user?.name}</h2>
-            <p className="text-sm text-muted">{user?.email}</p>
-            <span className="text-xs text-primary capitalize">{user?.role?.replace('_', ' ')}</span>
+            <h2 className="text-xl font-semibold">Admin</h2>
+            <p className="text-sm text-muted">admin@construflow.com</p>
+            <span className="text-xs text-primary capitalize">Super Admin</span>
           </div>
         </div>
 

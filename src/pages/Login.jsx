@@ -1,152 +1,147 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { useNavigate, Link, useLocation } from 'react-router-dom'
-import { Eye, EyeOff, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Eye, EyeOff, LogIn, Globe } from 'lucide-react'
+import { loginUser, signInWithGoogle, getErrorMessage } from '../services/authService'
 
 export default function Login() {
-  const { login, authLoading } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
-
   const [form, setForm] = useState({ email: '', password: '' })
-  const [rememberMe, setRememberMe] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
+  const [showPw, setShowPw] = useState(false)
+  const [remember, setRemember] = useState(false)
   const [error, setError] = useState('')
-  const [fieldErrors, setFieldErrors] = useState({})
-  const [successMsg, setSuccessMsg] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [needsVerification, setNeedsVerification] = useState(false)
+  const [verifyEmail, setVerifyEmail] = useState('')
 
-  useEffect(() => {
-    if (location.state?.message) {
-      setSuccessMsg(location.state.message)
-    }
-  }, [location.state])
-
-  function validateForm() {
-    const errors = {}
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!form.email.trim()) errors.email = 'Email is required'
-    else if (!emailRegex.test(form.email)) errors.email = 'Invalid email address'
-    if (!form.password) errors.password = 'Password is required'
-    setFieldErrors(errors)
-    return Object.keys(errors).length === 0
+  function handleChange(e) {
+    setForm(p => ({ ...p, [e.target.name]: e.target.value }))
+    setError('')
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
-    setError('')
-    setSuccessMsg('')
-    if (!validateForm()) return
-
-    const result = await login(form.email, form.password, rememberMe)
-    if (result.success) {
-      if (result.requiresCompanySelection) {
-        navigate('/select-company', { state: { companies: result.companies }, replace: true })
+    if (!form.email || !form.password) { setError('All fields are required'); return }
+    setLoading(true)
+    try {
+      await loginUser(form)
+      navigate('/', { replace: true })
+    } catch (err) {
+      if (err.code === 'email-not-verified') {
+        setNeedsVerification(true)
+        setVerifyEmail(err.email)
       } else {
-        localStorage.setItem('cf_session_user', JSON.stringify({ email: form.email }))
-        navigate(result.role === 'super_admin' ? '/system-admin' : '/', { replace: true })
+        setError(getErrorMessage(err))
       }
-    } else {
-      if (result.code === 'EMAIL_NOT_VERIFIED') {
-        navigate('/verify-email', { state: { email: result.email } })
-        return
-      }
-      setError(result.error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  return (
-    <div className="min-h-screen bg-bg flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary">ConstruFlow</h1>
-          <p className="text-muted text-sm mt-2">Construction Cash Flow Management</p>
+  async function handleGoogle() {
+    setLoading(true)
+    try {
+      await signInWithGoogle()
+      navigate('/', { replace: true })
+    } catch (err) {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError(getErrorMessage(err))
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleResend() {
+    try {
+      const { resendVerificationEmail } = await import('../services/authService')
+      await resendVerificationEmail()
+      alert('Verification email sent!')
+    } catch (err) {
+      setError(getErrorMessage(err))
+    }
+  }
+
+  if (needsVerification) {
+    return (
+      <div className="text-center space-y-4">
+        <div className="w-16 h-16 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto">
+          <LogIn size={28} className="text-yellow-400" />
         </div>
-        <div className="bg-card border border-border rounded-2xl p-8">
-          <h2 className="text-xl font-semibold text-white mb-1">Welcome back</h2>
-          <p className="text-sm text-muted mb-6">Sign in to your account</p>
-
-          {successMsg && (
-            <div className="flex items-center gap-2 text-sm text-success bg-success/10 rounded-lg p-3 mb-4">
-              <CheckCircle size={16} />
-              {successMsg}
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-center gap-2 text-sm text-danger bg-danger/10 rounded-lg p-3 mb-4">
-              <AlertCircle size={16} />
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-sm text-muted">Email Address</label>
-              <input
-                type="email"
-                required
-                value={form.email}
-                onChange={e => { setForm({ ...form, email: e.target.value }); setFieldErrors({ ...fieldErrors, email: '' }) }}
-                className={`w-full bg-bg border ${fieldErrors.email ? 'border-danger' : 'border-border'} rounded-lg px-3 py-2.5 text-sm text-white placeholder-muted focus:ring-1 focus:ring-primary transition-colors`}
-                placeholder="you@example.com"
-                autoComplete="email"
-              />
-              {fieldErrors.email && <p className="text-xs text-danger">{fieldErrors.email}</p>}
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-sm text-muted">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={form.password}
-                  onChange={e => { setForm({ ...form, password: e.target.value }); setFieldErrors({ ...fieldErrors, password: '' }) }}
-                  className={`w-full bg-bg border ${fieldErrors.password ? 'border-danger' : 'border-border'} rounded-lg px-3 py-2.5 pr-10 text-sm text-white placeholder-muted focus:ring-1 focus:ring-primary transition-colors`}
-                  placeholder="Enter your password"
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white transition-colors"
-                >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              {fieldErrors.password && <p className="text-xs text-danger">{fieldErrors.password}</p>}
-            </div>
-
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={e => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded border-border bg-bg text-primary focus:ring-primary"
-                />
-                <span className="text-sm text-muted">Remember Me</span>
-              </label>
-              <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-                Forgot Password?
-              </Link>
-            </div>
-
-            <button
-              type="submit"
-              disabled={authLoading}
-              className="w-full bg-primary text-white py-2.5 rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-            >
-              {authLoading ? <><Loader2 size={16} className="animate-spin" /> Signing in...</> : 'Login'}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-muted mt-6">
-            Don't have an account?{' '}
-            <Link to="/signup" className="text-primary hover:underline font-medium">Create Account</Link>
-          </p>
+        <h2 className="text-xl font-bold">Email Not Verified</h2>
+        <p className="text-sm text-muted">
+          Please verify your email before logging in.<br />
+          A verification link was sent to <strong className="text-white">{verifyEmail}</strong>
+        </p>
+        <button onClick={handleResend} className="text-primary text-sm hover:underline">
+          Resend verification email
+        </button>
+        <div>
+          <button onClick={() => { setNeedsVerification(false); setError('') }}
+            className="text-sm text-muted hover:text-white">
+            Back to login
+          </button>
         </div>
       </div>
+    )
+  }
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-6 space-y-5">
+      <div className="text-center">
+        <h2 className="text-xl font-bold">Welcome Back</h2>
+        <p className="text-sm text-muted mt-1">Sign in to your account</p>
+      </div>
+
+      {error && (
+        <div className="bg-danger/10 border border-danger/30 text-danger text-sm rounded-lg px-4 py-2.5">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1">
+          <label className="text-sm text-muted">Email</label>
+          <input name="email" type="email" value={form.email} onChange={handleChange}
+            className="w-full bg-bg border border-border rounded-lg px-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary" placeholder="you@example.com" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-sm text-muted">Password</label>
+          <div className="relative">
+            <input name="password" type={showPw ? 'text' : 'password'} value={form.password} onChange={handleChange}
+              className="w-full bg-bg border border-border rounded-lg px-3 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary pr-10" placeholder="••••••••" />
+            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-white">
+              {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+        </div>
+        <div className="flex items-center justify-between text-sm">
+          <label className="flex items-center gap-2 text-muted cursor-pointer">
+            <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}
+              className="rounded border-border bg-bg" />
+            Remember me
+          </label>
+          <Link to="/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
+        </div>
+        <button type="submit" disabled={loading}
+          className="w-full flex items-center justify-center gap-2 bg-primary text-white py-2.5 rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50">
+          {loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <LogIn size={16} />}
+          Sign In
+        </button>
+      </form>
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
+        <div className="relative flex justify-center"><span className="bg-card px-2 text-xs text-muted">or</span></div>
+      </div>
+
+      <button onClick={handleGoogle} disabled={loading}
+        className="w-full flex items-center justify-center gap-2 bg-white/5 border border-border text-white py-2.5 rounded-lg text-sm font-medium hover:bg-white/10 disabled:opacity-50">
+        <Globe size={16} /> Continue with Google
+      </button>
+
+      <p className="text-center text-sm text-muted">
+        Don't have an account? <Link to="/signup" className="text-primary hover:underline">Sign up</Link>
+      </p>
     </div>
   )
 }

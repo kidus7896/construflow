@@ -16,12 +16,11 @@ export default function Dashboard() {
   const withHoldingRate = (data.settings?.withholdingRate || 3) / 100
 
   const totalSales = companyData.supplies.reduce((s, x) => s + (parseFloat(x.totalAmount) || 0), 0)
-  const totalPayments = companyData.payments.reduce((s, x) => s + (parseFloat(x.paymentAmount) || 0), 0)
-  const aggregateTotal = companyData.aggregateExpenses.reduce((s, x) => s + (parseFloat(x.totalCost) || 0), 0)
-  const transportTotal = companyData.transportExpenses.reduce((s, x) => {
-    return s + (parseFloat(x.fuelCost || 0) + parseFloat(x.loadingCost || 0) + parseFloat(x.otherCost || 0))
-  }, 0)
-  const totalExpenses = aggregateTotal + transportTotal
+  const totalPayments = companyData.payments.reduce((s, x) => s + (parseFloat(x.netPayable) || 0), 0)
+  const aggregateTotal = companyData.aggregateExpenses.reduce((s, x) => s + (parseFloat(x.subtotal) || 0), 0)
+  const transportTotal = companyData.transportExpenses.reduce((s, x) => s + (parseFloat(x.subtotal) || 0), 0)
+  const miscellaneousTotal = companyData.miscellaneousExpenses.reduce((s, x) => s + (parseFloat(x.subtotal) || parseFloat(x.totalCost) || 0), 0)
+  const totalExpenses = aggregateTotal + transportTotal + miscellaneousTotal
 
   const cashInData = totalPayments
   const cashOutData = totalExpenses
@@ -51,13 +50,13 @@ export default function Dashboard() {
     }]
   }
 
-  const expenseLabels = ['Aggregate', 'Transport']
-  const expenseValues = [aggregateTotal, transportTotal]
+  const expenseLabels = ['Aggregate', 'Transport', 'Miscellaneous']
+  const expenseValues = [aggregateTotal, transportTotal, miscellaneousTotal]
   const expenseChart = {
     labels: expenseLabels,
     datasets: [{
       data: expenseValues,
-      backgroundColor: ['#F59E0B', '#3B82F6'],
+      backgroundColor: ['#F59E0B', '#3B82F6', '#8B5CF6'],
     }]
   }
 

@@ -26,7 +26,7 @@ export default function TransactionHistory() {
     if (dateTo) result = result.filter(t => t.date <= dateTo)
     result.sort((a, b) => {
       let cmp = 0
-      if (sortField === 'date') cmp = a.date.localeCompare(b.date)
+      if (sortField === 'date') cmp = (a.date || '').localeCompare(b.date || '')
       else if (sortField === 'cashIn') cmp = (a.cashIn || 0) - (b.cashIn || 0)
       else if (sortField === 'cashOut') cmp = (a.cashOut || 0) - (b.cashOut || 0)
       else if (sortField === 'balance') cmp = a.balance - b.balance

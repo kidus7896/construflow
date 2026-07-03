@@ -455,7 +455,7 @@ export function useStore() {
     }
     const e = filterByCompany(data.aggregateExpenses, cid)
     addExpenseTx(e, 'Aggregate Expense', e => `${e.description||e.materialType} from ${e.supplierName}`, e => parseFloat(e.netPayable || e.totalCost || 0))
-    addExpenseTx(filterByCompany(data.transportExpenses, cid), 'Transport Expense', t => `Transport - ${t.driverName}`, t => parseFloat(t.totalCost||0))
+    addExpenseTx(filterByCompany(data.transportExpenses, cid), 'Transport Expense', t => `Transport - ${t.provider}`, t => parseFloat(t.netPayable||0))
     addExpenseTx(filterByCompany(data.fuelExpenses, cid), 'Fuel Expense', f => `Fuel - ${f.vehiclePlate||''}`, f => parseFloat(f.totalCost||f.amount||0))
     addExpenseTx(filterByCompany(data.equipmentRental, cid), 'Equipment Rental', e => `Rental - ${e.equipmentName||''}`, e => parseFloat(e.totalCost||e.amount||0))
     addExpenseTx(filterByCompany(data.machineryMaintenance, cid), 'Machinery Maintenance', m => `Maintenance - ${m.equipmentName||''}`, m => parseFloat(m.totalCost||m.amount||0))

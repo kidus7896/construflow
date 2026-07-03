@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useStore } from '../../store/useStore'
-import { useAuth } from '../../context/AuthContext'
 import { Bar } from 'react-chartjs-2'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js'
 import { Building2, Users, CreditCard, AlertCircle, TrendingUp, Clock, LifeBuoy, Activity, DollarSign, Zap, Ticket, UserCheck } from 'lucide-react'
@@ -24,7 +23,6 @@ function StatCard({ icon: Icon, label, value, color, subtitle }) {
 
 export default function AdminDashboard() {
   const { data } = useStore()
-  const { user } = useAuth()
   const [time, setTime] = useState(new Date())
 
   useEffect(() => {

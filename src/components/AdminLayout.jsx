@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { logoutUser } from '../services/authService'
 import {
   LayoutDashboard, Building2, Users, Shield, CreditCard, Banknote,
   BarChart3, LifeBuoy, Bell, Settings, LogOut, X, Menu,
@@ -22,11 +23,10 @@ const navItems = [
   { to: '/system-admin/backup', label: 'Backup & Restore', icon: Database },
   { to: '/system-admin/audit-logs', label: 'Audit Logs', icon: FileText },
   { to: '/system-admin/system-settings', label: 'System Settings', icon: Settings },
-  { to: '/system-admin/sessions', label: 'Active Sessions', icon: Smartphone },
 ]
 
 export default function AdminLayout() {
-  const { logout } = useAuth()
+  const { profile } = useAuth()
   const navigate = useNavigate()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [openTickets, setOpenTickets] = useState(0)
@@ -40,7 +40,7 @@ export default function AdminLayout() {
   }, [])
 
   async function handleLogout() {
-    await logout()
+    await logoutUser()
     navigate('/login', { replace: true })
   }
 
@@ -93,7 +93,7 @@ export default function AdminLayout() {
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted hover:text-white hover:bg-white/5 transition-colors"
           >
             <UserCircle size={18} />
-            Profile
+            {profile?.fullName || 'Profile'}
           </NavLink>
           <button onClick={handleLogout}
             className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-muted hover:text-danger hover:bg-danger/10 transition-colors mt-1"

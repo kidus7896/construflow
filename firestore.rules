@@ -1,0 +1,75 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if the requesting user is authenticated
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Helper: get the user's role from Firestore
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Helper: check if the user has a specific role or higher
+    function hasRole(role) {
+      let roles = ['user', 'manager', 'admin', 'super_admin'];
+      let userRole = getUserRole();
+      return userRole != null && roles.indexOf(userRole) >= roles.indexOf(role);
+    }
+
+    // Users collection
+    match /users/{uid} {
+      // Users can read their own profile; admins can read any
+      allow read: if isAuth() && (request.auth.uid == uid || hasRole('admin'));
+
+      // Users can write their own profile (limited fields)
+      allow create: if isAuth() && request.auth.uid == uid
+                    && request.resource.data.keys().hasAll(['email', 'fullName', 'role', 'status', 'createdAt'])
+                    && request.resource.data.role == 'user'
+                    && request.resource.data.status == 'active';
+
+      allow update: if isAuth() && (
+        // User can update own non-role, non-status fields
+        (request.auth.uid == uid
+          && (!request.resource.data.keys().hasAny(['role', 'status', 'email']))
+        )
+        // Admins can update any field
+        || hasRole('admin')
+      );
+
+      // Only super_admin can delete users
+      allow delete: if isAuth() && hasRole('super_admin');
+    }
+
+    // Companies collection
+    match /companies/{companyId} {
+      allow read: if isAuth() && hasRole('admin');
+      allow write: if isAuth() && hasRole('admin');
+    }
+
+    // Projects collection
+    match /projects/{projectId} {
+      allow read: if isAuth();
+      allow write: if isAuth() && hasRole('manager');
+    }
+
+    // Tasks collection
+    match /tasks/{taskId} {
+      allow read: if isAuth();
+      allow write: if isAuth() && hasRole('manager');
+    }
+
+    // Subscriptions collection
+    match /subscriptions/{subId} {
+      allow read, write: if isAuth() && hasRole('admin');
+    }
+
+    // Default: deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

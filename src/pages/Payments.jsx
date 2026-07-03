@@ -1,5 +1,4 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
 import { useStore } from '../store/useStore'
 import { formatCurrency, formatDate, today } from '../utils/format'
 import { exportToExcel, printTable } from '../utils/export'
@@ -56,7 +55,6 @@ const emptyForm = {
 }
 
 export default function Payments() {
-  const { hasPermission } = useAuth()
   const { data, companyData, companies, addPayment, editPayment, deletePayment } = useStore()
 
   const [search, setSearch] = useState('')
@@ -87,6 +85,11 @@ export default function Payments() {
   const [reportModal, setReportModal] = useState(false)
   const [reportType, setReportType] = useState('')
   const [reportPeriod, setReportPeriod] = useState({ from: '', to: '' })
+  const [importModal, setImportModal] = useState(false)
+  const [importStep, setImportStep] = useState('upload')
+  const [importData, setImportData] = useState({ headers: [], rows: [], mapped: {}, preview: [], validCount: 0, invalidCount: 0 })
+  const [importFile, setImportFile] = useState(null)
+  const importFileRef = useRef(null)
 
   const companyRef = useRef(null)
   const itemRef = useRef(null)
@@ -359,6 +362,121 @@ export default function Payments() {
     setReportModal(false)
   }
 
+  function handleImportFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const ext = file.name.split('.').pop().toLowerCase()
+    if (!['csv', 'xlsx', 'xls'].includes(ext)) { alert('Unsupported format. Use CSV or XLSX.'); return }
+    setImportFile(file)
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      let headers = [], rows = []
+      try {
+        if (ext === 'csv') {
+          const text = ev.target.result
+          const lines = text.split(/\r?\n/).filter(l => l.trim())
+          if (lines.length < 2) { alert('No data found'); return }
+          headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''))
+          rows = lines.slice(1).filter(l => l.trim()).map(l => {
+            const vals = []; let cur = '', inQuote = false
+            for (const ch of l) {
+              if (ch === '"') inQuote = !inQuote
+              else if (ch === ',' && !inQuote) { vals.push(cur.trim().replace(/^"|"$/g, '')); cur = '' }
+              else cur += ch
+            }
+            vals.push(cur.trim().replace(/^"|"$/g, ''))
+            return vals
+          })
+        } else {
+          const wb = XLSX.read(ev.target.result, { type: 'binary' })
+          const ws = wb.Sheets[wb.SheetNames[0]]
+          const json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+          if (json.length > 0) { headers = json[0].map(h => String(h).trim()); rows = json.slice(1).filter(r => r.some(c => String(c).trim())) }
+        }
+        if (!headers.length || !rows.length) { alert('No data found.'); return }
+        setImportData(prev => ({ ...prev, headers, rows, mapped: autoDetectColumns(headers), preview: [], validCount: 0, invalidCount: 0 }))
+        setImportStep('mapping')
+      } catch (err) { alert('Failed to parse: ' + err.message) }
+    }
+    if (ext === 'xlsx' || ext === 'xls') reader.readAsBinaryString(file)
+    else reader.readAsText(file)
+    e.target.value = ''
+  }
+
+  function autoDetectColumns(headers) {
+    const map = { date: '', companyName: '', tinNumber: '', invoiceNumber: '', item: '', quantity: '', unitPrice: '', receiptNumber: '', notes: '' }
+    const lower = headers.map(h => String(h).toLowerCase().trim())
+    lower.forEach((h, i) => {
+      if (/\bdate\b/.test(h)) map.date = headers[i]
+      else if (/(company|customer|supplier|name|client)/.test(h) && !/(tin|fs|invoice)/.test(h)) map.companyName = headers[i]
+      else if (/\btin\b/.test(h) || /t\.?i\.?n/.test(h)) map.tinNumber = headers[i]
+      else if (/(invoice|inv)/.test(h)) map.invoiceNumber = headers[i]
+      else if (/\bitem\b/.test(h) || /product|service|material/.test(h)) map.item = headers[i]
+      else if (/\bqty\b/.test(h) || /quantity/.test(h)) map.quantity = headers[i]
+      else if (/(unit.?price|price|rate)/.test(h)) map.unitPrice = headers[i]
+      else if (/(receipt|rcpt)/.test(h)) map.receiptNumber = headers[i]
+      else if (/(note|remark)/.test(h)) map.notes = headers[i]
+    })
+    return map
+  }
+
+  function parseDate(val) {
+    if (!val) return ''
+    val = String(val).trim()
+    if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val
+    const m = val.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+    if (m) return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`
+    try { const d = new Date(val); if (!isNaN(d)) { const y = d.getFullYear(); const mo = String(d.getMonth()+1).padStart(2,'0'); const da = String(d.getDate()).padStart(2,'0'); return `${y}-${mo}-${da}` } } catch {}
+    return ''
+  }
+
+  function processImport() {
+    const { headers, rows, mapped } = importData
+    const ci = (f) => { const n = mapped[f]; return n ? headers.indexOf(n) : -1 }
+    const preview = []; let vc = 0, ic = 0
+    rows.forEach((row, i) => {
+      const date = parseDate(row[ci('date')])
+      const companyName = (row[ci('companyName')] || '').trim()
+      const tinNumber = (row[ci('tinNumber')] || '').trim()
+      const invoiceNumber = (row[ci('invoiceNumber')] || '').trim()
+      const item = (row[ci('item')] || '').trim()
+      const quantity = parseFloat(String(row[ci('quantity')] || '').replace(/[^0-9.-]/g, ''))
+      const unitPrice = parseFloat(String(row[ci('unitPrice')] || '').replace(/[^0-9.-]/g, ''))
+      const receiptNumber = (row[ci('receiptNumber')] || '').trim()
+      const notes = (row[ci('notes')] || '').trim()
+      const errs = []
+      if (!date) errs.push('Invalid date')
+      if (!companyName) errs.push('Missing company')
+      if (!item) errs.push('Missing item')
+      if (!quantity || quantity <= 0) errs.push('Invalid quantity')
+      if (!unitPrice || unitPrice <= 0) errs.push('Invalid unit price')
+      const c = calc(quantity, unitPrice)
+      preview.push({ row: i+2, date, companyName, tinNumber, invoiceNumber, item, quantity, unitPrice, totalPrice: c.total, vatAmount: c.vat, grandTotal: c.grand, wht: c.wht, netPayable: c.net, receiptNumber, notes, valid: errs.length === 0, errors: errs })
+      if (errs.length === 0) vc++; else ic++
+    })
+    setImportData(prev => ({ ...prev, preview, validCount: vc, invalidCount: ic }))
+    setImportStep('preview')
+  }
+
+  function confirmImport() {
+    const { preview, validCount } = importData
+    let imported = 0
+    preview.filter(p => p.valid).forEach(p => {
+      addPayment({
+        date: p.date, companyName: p.companyName, tinNumber: p.tinNumber,
+        invoiceNumber: p.invoiceNumber, item: p.item, unit: 'Piece',
+        quantity: p.quantity, unitPrice: p.unitPrice,
+        totalPrice: p.totalPrice, vatRate: VAT_RATE, vatAmount: p.vatAmount,
+        grandTotal: p.grandTotal, withholdingRate: WHT_RATE, withholdingAmount: p.wht,
+        netPayable: p.netPayable, paymentMethod: '', paymentStatus: 'Pending',
+        receiptNumber: p.receiptNumber, notes: p.notes,
+      })
+      imported++
+    })
+    setImportModal(false); setImportStep('upload')
+    alert(`Imported ${imported} of ${preview.length} rows.`)
+  }
+
   const filteredCompanies = companies.filter(c =>
     c.name?.toLowerCase().includes(companySearch.toLowerCase()) && c.status !== 'archived'
   )
@@ -394,11 +512,13 @@ export default function Payments() {
             className="p-2 bg-card border border-border rounded-lg text-muted hover:text-white transition-colors" title="Reports">
             <FileText size={18} />
           </button>
-          {hasPermission('payments', 'create') && (
-            <button onClick={openAdd} className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-              <Plus size={16} /> New Payment
-            </button>
-          )}
+          <button onClick={() => { setImportModal(true); setImportStep('upload') }}
+            className="p-2 bg-card border border-border rounded-lg text-muted hover:text-white transition-colors" title="Import">
+            <Upload size={18} />
+          </button>
+          <button onClick={openAdd} className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+            <Plus size={16} /> New Payment
+          </button>
         </div>
       </div>
 
@@ -526,21 +646,15 @@ export default function Payments() {
                       <button onClick={() => openView(p)} className="p-1.5 text-muted hover:text-primary transition-colors" title="View">
                         <Eye size={15} />
                       </button>
-                      {hasPermission('payments', 'update') && (
-                        <button onClick={() => openEdit(p)} className="p-1.5 text-muted hover:text-white transition-colors" title="Edit">
-                          <Pencil size={15} />
-                        </button>
-                      )}
-                      {hasPermission('payments', 'delete') && (
-                        <button onClick={() => setConfirmDelete(p.id)} className="p-1.5 text-muted hover:text-danger transition-colors" title="Delete">
-                          <Trash2 size={15} />
-                        </button>
-                      )}
-                      {hasPermission('payments', 'create') && (
-                        <button onClick={() => handleDuplicate(p)} className="p-1.5 text-muted hover:text-purple-400 transition-colors" title="Duplicate">
-                          <Copy size={15} />
-                        </button>
-                      )}
+                      <button onClick={() => openEdit(p)} className="p-1.5 text-muted hover:text-white transition-colors" title="Edit">
+                        <Pencil size={15} />
+                      </button>
+                      <button onClick={() => setConfirmDelete(p.id)} className="p-1.5 text-muted hover:text-danger transition-colors" title="Delete">
+                        <Trash2 size={15} />
+                      </button>
+                      <button onClick={() => handleDuplicate(p)} className="p-1.5 text-muted hover:text-purple-400 transition-colors" title="Duplicate">
+                        <Copy size={15} />
+                      </button>
                       <button onClick={() => handlePrintItem(p)} className="p-1.5 text-muted hover:text-cyan-400 transition-colors" title="Print">
                         <Printer size={15} />
                       </button>
@@ -886,6 +1000,84 @@ export default function Payments() {
             </button>
           </div>
         </div>
+      </Modal>
+
+      <Modal open={importModal} onClose={() => { setImportModal(false); setImportStep('upload') }} title="Import Payments" size="max-w-3xl">
+        {importStep === 'upload' && (
+          <div className="space-y-4">
+            <div className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/50 cursor-pointer" onClick={() => importFileRef.current?.click()}>
+              <Upload size={40} className="mx-auto text-muted mb-3" />
+              <p className="text-muted">Click to upload or drag & drop</p>
+              <p className="text-xs text-muted mt-1">CSV or XLSX files</p>
+              <input ref={importFileRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleImportFile} className="hidden" />
+            </div>
+          </div>
+        )}
+        {importStep === 'mapping' && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted">Map columns ({importData.headers.length} columns, {importData.rows.length} rows):</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {Object.entries({
+                date: 'Date *', companyName: 'Company Name *', tinNumber: 'TIN Number',
+                invoiceNumber: 'Invoice #', item: 'Item *', quantity: 'Quantity *',
+                unitPrice: 'Unit Price *', receiptNumber: 'Receipt #', notes: 'Notes',
+              }).map(([field, label]) => (
+                <div key={field} className="space-y-1">
+                  <label className="text-xs text-muted">{label}</label>
+                  <select value={importData.mapped[field] || ''} onChange={e => setImportData(prev => ({...prev, mapped: {...prev.mapped, [field]: e.target.value}}))}
+                    className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs text-white">
+                    <option value="">- Skip -</option>
+                    {importData.headers.map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setImportStep('upload')} className="px-4 py-2 text-sm text-muted hover:text-white">Back</button>
+              <button onClick={processImport} className="bg-primary text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-primary/90">Process</button>
+            </div>
+          </div>
+        )}
+        {importStep === 'preview' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-bg rounded-lg p-2 text-center"><p className="text-xs text-muted">Valid</p><p className="text-sm font-bold text-success">{importData.validCount}</p></div>
+              <div className="bg-bg rounded-lg p-2 text-center"><p className="text-xs text-muted">Invalid</p><p className="text-sm font-bold text-danger">{importData.invalidCount}</p></div>
+              <div className="bg-bg rounded-lg p-2 text-center"><p className="text-xs text-muted">Total Rows</p><p className="text-sm font-bold">{importData.preview.length}</p></div>
+            </div>
+            <div className="max-h-60 overflow-y-auto border border-border rounded-lg">
+              <table className="w-full text-xs">
+                <thead><tr className="bg-bg text-muted sticky top-0">
+                  <th className="p-2 text-left">#</th><th className="p-2 text-left">Date</th><th className="p-2 text-left">Company</th>
+                  <th className="p-2 text-left">Item</th><th className="p-2 text-right">Qty</th><th className="p-2 text-right">Price</th>
+                  <th className="p-2 text-right">Total</th><th className="p-2 text-right">Net</th><th className="p-2 text-center">Status</th>
+                </tr></thead>
+                <tbody>
+                  {importData.preview.map((p, i) => (
+                    <tr key={i} className={`border-t border-border/30 ${p.valid ? '' : 'bg-danger/5'}`}>
+                      <td className="p-2">{p.row}</td>
+                      <td className="p-2">{p.date}</td>
+                      <td className="p-2">{p.companyName}</td>
+                      <td className="p-2">{p.item}</td>
+                      <td className="p-2 text-right">{p.quantity}</td>
+                      <td className="p-2 text-right">{p.unitPrice ? formatCurrency(p.unitPrice) : '-'}</td>
+                      <td className="p-2 text-right">{p.totalPrice ? formatCurrency(p.totalPrice) : '-'}</td>
+                      <td className="p-2 text-right text-success">{p.netPayable ? formatCurrency(p.netPayable) : '-'}</td>
+                      <td className="p-2 text-center">{p.valid ? <span className="text-success text-xs">✓</span> : <span className="text-danger text-xs" title={p.errors.join(', ')}>✗</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setImportStep('mapping')} className="px-4 py-2 text-sm text-muted hover:text-white">Back</button>
+              <button onClick={confirmImport} disabled={importData.validCount === 0}
+                className={`px-6 py-2 rounded-lg text-sm font-medium ${importData.validCount > 0 ? 'bg-success text-white hover:bg-success/90' : 'bg-muted/30 text-muted cursor-not-allowed'}`}>
+                Import {importData.validCount} Records
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

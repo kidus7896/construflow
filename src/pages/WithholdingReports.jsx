@@ -1,5 +1,4 @@
 import { useState, useMemo, useRef } from 'react'
-import { useAuth } from '../context/AuthContext'
 import { useStore } from '../store/useStore'
 import { formatCurrency, formatDate, today, generateId } from '../utils/format'
 import { exportToExcel, exportToCSV } from '../utils/export'
@@ -93,7 +92,6 @@ function formatMonth(m) {
 }
 
 export default function WithholdingReports() {
-  const { hasPermission } = useAuth()
   const { data, companyData, addWithholdTaken, editWithholdTaken, deleteWithholdTaken, clearWithholdTaken, addWithholdGiven, editWithholdGiven, deleteWithholdGiven, clearWithholdGiven, addWhtImportLog, addWhtAuditLog } = useStore()
 
   const [tab, setTab] = useState('taken')
@@ -432,12 +430,8 @@ export default function WithholdingReports() {
                   <td className="p-3 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={() => openView(v)} className="p-1 text-muted hover:text-primary" title="View"><Eye size={14} /></button>
-                      {hasPermission('withholding', 'update') && (
-                        <button onClick={() => openEdit(v)} className="p-1 text-muted hover:text-primary" title="Edit"><Pencil size={14} /></button>
-                      )}
-                      {hasPermission('withholding', 'delete') && (
-                        <button onClick={() => handleDelete(v.id)} className="p-1 text-muted hover:text-danger" title="Delete"><Trash2 size={14} /></button>
-                      )}
+                      <button onClick={() => openEdit(v)} className="p-1 text-muted hover:text-primary" title="Edit"><Pencil size={14} /></button>
+                      <button onClick={() => handleDelete(v.id)} className="p-1 text-muted hover:text-danger" title="Delete"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -521,31 +515,25 @@ export default function WithholdingReports() {
               <button onClick={handleExportCSV} className="p-2 bg-card border border-border rounded-lg text-muted hover:text-white" title="CSV"><Download size={16} /></button>
               <button onClick={handleExportExcel} className="p-2 bg-card border border-border rounded-lg text-muted hover:text-white" title="Excel"><FileSpreadsheet size={16} /></button>
               <button onClick={handlePrintReport} className="p-2 bg-card border border-border rounded-lg text-muted hover:text-white" title="Print"><Printer size={16} /></button>
-              {hasPermission('withholding', 'delete') && (
-                <button onClick={() => {
-                  if (confirm(`Delete ALL ${tab === 'taken' ? 'withhold taken' : 'withhold received'} records? This cannot be undone.`)) {
-                    if (confirm('Are you sure?')) {
-                      const c = tab === 'taken' ? clearWithholdTaken : clearWithholdGiven
-                      c()
-                      addWhtAuditLog({ action: 'delete_all', type: tab, description: `Deleted all ${tab} records`, details: `${currentList.length} records removed` })
-                    }
+              <button onClick={() => {
+                if (confirm(`Delete ALL ${tab === 'taken' ? 'withhold taken' : 'withhold received'} records? This cannot be undone.`)) {
+                  if (confirm('Are you sure?')) {
+                    const c = tab === 'taken' ? clearWithholdTaken : clearWithholdGiven
+                    c()
+                    addWhtAuditLog({ action: 'delete_all', type: tab, description: `Deleted all ${tab} records`, details: `${currentList.length} records removed` })
                   }
-                }} className="flex items-center gap-1.5 bg-danger/10 border border-danger/30 text-danger px-3 py-2 rounded-lg text-sm hover:bg-danger/20">
-                  <Trash2 size={15} /> Delete All
-                </button>
-              )}
-              {hasPermission('withholding', 'create') && (
-                <button onClick={() => { setImportStep('upload'); setImportModal(true) }}
-                  className="flex items-center gap-1.5 bg-card border border-border text-white px-3 py-2 rounded-lg text-sm hover:bg-white/5">
-                  <Upload size={15} /> Import WHT Data
-                </button>
-              )}
-              {hasPermission('withholding', 'create') && (
-                <button onClick={openAdd}
-                  className="flex items-center gap-1.5 bg-primary text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-primary/90">
-                  <Plus size={15} /> New WHT Record
-                </button>
-              )}
+                }
+              }} className="flex items-center gap-1.5 bg-danger/10 border border-danger/30 text-danger px-3 py-2 rounded-lg text-sm hover:bg-danger/20">
+                <Trash2 size={15} /> Delete All
+              </button>
+              <button onClick={() => { setImportStep('upload'); setImportModal(true) }}
+                className="flex items-center gap-1.5 bg-card border border-border text-white px-3 py-2 rounded-lg text-sm hover:bg-white/5">
+                <Upload size={15} /> Import WHT Data
+              </button>
+              <button onClick={openAdd}
+                className="flex items-center gap-1.5 bg-primary text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-primary/90">
+                <Plus size={15} /> New WHT Record
+              </button>
             </div>
           </div>
           {renderTable()}

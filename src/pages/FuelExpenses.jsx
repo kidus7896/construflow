@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react'
-import { useAuth } from '../context/AuthContext'
 import { useStore } from '../store/useStore'
 import { formatCurrency, formatDate, today } from '../utils/format'
 import Modal from '../components/Modal'
@@ -8,7 +7,6 @@ import SummaryCard from '../components/SummaryCard'
 import { Search, Plus, Pencil, Trash2 } from 'lucide-react'
 
 export default function FuelExpenses() {
-  const { hasPermission } = useAuth()
   const { companyData, addFuelExpense, editFuelExpense, deleteFuelExpense } = useStore()
   const items = companyData.fuelExpenses || []
 
@@ -63,7 +61,7 @@ export default function FuelExpenses() {
             <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
               className="w-full sm:w-56 bg-bg border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-muted" />
           </div>
-          {hasPermission('expenses', 'create') && <button onClick={openAdd} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90"><Plus size={16} /> Add Fuel</button>}
+          <button onClick={openAdd} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90"><Plus size={16} /> Add Fuel</button>
         </div>
       </div>
 
@@ -99,8 +97,8 @@ export default function FuelExpenses() {
                 <td className="p-3">{i.supplier || '-'}</td>
                 <td className="p-3 text-center">
                   <div className="flex items-center justify-center gap-2">
-                    {hasPermission('expenses', 'update') && <button onClick={() => openEdit(i)} className="p-1.5 text-muted hover:text-primary"><Pencil size={15} /></button>}
-                    {hasPermission('expenses', 'delete') && <button onClick={() => { if (confirm('Delete?')) deleteFuelExpense(i.id) }} className="p-1.5 text-muted hover:text-danger"><Trash2 size={15} /></button>}
+                    <button onClick={() => openEdit(i)} className="p-1.5 text-muted hover:text-primary"><Pencil size={15} /></button>
+                    <button onClick={() => { if (confirm('Delete?')) deleteFuelExpense(i.id) }} className="p-1.5 text-muted hover:text-danger"><Trash2 size={15} /></button>
                   </div>
                 </td>
               </tr>

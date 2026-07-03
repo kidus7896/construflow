@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { Bell, Send, X, Eye, Trash2 } from 'lucide-react'
 import { useStore } from '../../store/useStore'
-import { useAuth } from '../../context/AuthContext'
 
 export default function AdminAnnouncements() {
   const { data, addAnnouncement, addActivityLog } = useStore()
-  const { user } = useAuth()
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ title: '', message: '', target: 'all', targetIds: [] })
 
@@ -13,7 +11,7 @@ export default function AdminAnnouncements() {
 
   function handleSend(e) {
     e.preventDefault()
-    addAnnouncement({ ...form, createdBy: user?.id })
+    addAnnouncement({ ...form, createdBy: 'admin' })
     setForm({ title: '', message: '', target: 'all', targetIds: [] })
     setShowForm(false)
   }

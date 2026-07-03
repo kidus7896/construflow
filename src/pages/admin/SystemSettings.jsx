@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { Settings, Save, Image, Mail, Globe, Key, Wrench } from 'lucide-react'
 import { useStore } from '../../store/useStore'
-import { useAuth } from '../../context/AuthContext'
 
 export default function AdminSystemSettings() {
   const { data, updateSettings, addActivityLog } = useStore()
-  const { user } = useAuth()
   const [activeSection, setActiveSection] = useState('general')
   const [form, setForm] = useState({
     appName: 'ConstruFlow',
@@ -31,7 +29,7 @@ export default function AdminSystemSettings() {
     e.preventDefault()
     updateSettings({ vatRate: Number(form.defaultVatRate), withholdingRate: Number(form.defaultWhtRate) })
     localStorage.setItem('cf_system_settings', JSON.stringify(form))
-    addActivityLog('system_settings_updated', 'System settings updated', user?.id)
+    addActivityLog('system_settings_updated', 'System settings updated')
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }

@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react'
-import { useAuth } from '../context/AuthContext'
 import { useStore } from '../store/useStore'
 import { formatCurrency, formatDate, today } from '../utils/format'
 import Modal from '../components/Modal'
@@ -8,7 +7,6 @@ import SummaryCard from '../components/SummaryCard'
 import { Search, Plus, Pencil, Trash2 } from 'lucide-react'
 
 export default function MachineryMaintenance() {
-  const { hasPermission } = useAuth()
   const { companyData, addMachineryMaintenance, editMachineryMaintenance, deleteMachineryMaintenance } = useStore()
   const items = companyData.machineryMaintenance || []
   const [search, setSearch] = useState('')
@@ -36,7 +34,7 @@ export default function MachineryMaintenance() {
         <h1 className="text-2xl font-bold">Machinery Maintenance</h1>
         <div className="flex items-center gap-2">
           <div className="relative"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" /><input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="w-full sm:w-56 bg-bg border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-muted" /></div>
-          {hasPermission('expenses', 'create') && <button onClick={openAdd} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90"><Plus size={16} /> Add Maintenance</button>}
+          <button onClick={openAdd} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90"><Plus size={16} /> Add Maintenance</button>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -50,7 +48,7 @@ export default function MachineryMaintenance() {
             <tr key={i.id} className="border-b border-border/50 hover:bg-white/5">
               <td className="p-3">{formatDate(i.date)}</td><td className="p-3">{i.equipmentName}</td><td className="p-3">{i.maintenanceType}</td>
               <td className="p-3 text-right text-danger font-medium">{formatCurrency(i.cost)}</td><td className="p-3">{i.provider || '-'}</td>
-              <td className="p-3 text-center"><div className="flex items-center justify-center gap-2">{hasPermission('expenses', 'update') && <button onClick={() => openEdit(i)} className="p-1.5 text-muted hover:text-primary"><Pencil size={15} /></button>}{hasPermission('expenses', 'delete') && <button onClick={() => { if (confirm('Delete?')) deleteMachineryMaintenance(i.id) }} className="p-1.5 text-muted hover:text-danger"><Trash2 size={15} /></button>}</div></td>
+              <td className="p-3 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => openEdit(i)} className="p-1.5 text-muted hover:text-primary"><Pencil size={15} /></button><button onClick={() => { if (confirm('Delete?')) deleteMachineryMaintenance(i.id) }} className="p-1.5 text-muted hover:text-danger"><Trash2 size={15} /></button></div></td>
             </tr>
           ))}{filtered.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted">No maintenance records</td></tr>}</tbody>
         </table>

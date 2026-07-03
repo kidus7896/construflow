@@ -1,5 +1,4 @@
 import { useState, useMemo, useRef } from 'react'
-import { useAuth } from '../context/AuthContext'
 import { useStore } from '../store/useStore'
 import { formatCurrency, formatDate, today, generateId } from '../utils/format'
 import { exportToExcel, exportToCSV } from '../utils/export'
@@ -88,7 +87,6 @@ function formatMonth(m) {
 }
 
 export default function VatReports() {
-  const { hasPermission } = useAuth()
   const { data, companyData, addVatSale, editVatSale, deleteVatSale, clearVatSales, addVatPurchase, editVatPurchase, deleteVatPurchase, clearVatPurchases, addVatImportLog } = useStore()
   const vatRate = (data.settings?.vatRate || 15) / 100
 
@@ -482,13 +480,9 @@ export default function VatReports() {
                   <td className="p-3 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button onClick={() => openView(v)} className="p-1 text-muted hover:text-primary" title="View"><Eye size={14} /></button>
-                      {hasPermission('vat', 'update') && (
-                        <button onClick={() => openEdit(v, tab === 'sales')} className="p-1 text-muted hover:text-primary" title="Edit"><Pencil size={14} /></button>
-                      )}
+                      <button onClick={() => openEdit(v, tab === 'sales')} className="p-1 text-muted hover:text-primary" title="Edit"><Pencil size={14} /></button>
                       <button onClick={() => handlePrintRow(v)} className="p-1 text-muted hover:text-primary" title="Print"><Printer size={14} /></button>
-                      {hasPermission('vat', 'delete') && (
-                        <button onClick={() => { if (confirm('Delete this record?')) (tab === 'sales' ? deleteVatSale : deleteVatPurchase)(v.id) }} className="p-1 text-muted hover:text-danger" title="Delete"><Trash2 size={14} /></button>
-                      )}
+                      <button onClick={() => { if (confirm('Delete this record?')) (tab === 'sales' ? deleteVatSale : deleteVatPurchase)(v.id) }} className="p-1 text-muted hover:text-danger" title="Delete"><Trash2 size={14} /></button>
                     </div>
                   </td>
                 </tr>
@@ -576,29 +570,23 @@ export default function VatReports() {
               <button onClick={handleExportCSV} className="p-2 bg-card border border-border rounded-lg text-muted hover:text-white" title="Export CSV"><Download size={16} /></button>
               <button onClick={handleExportExcel} className="p-2 bg-card border border-border rounded-lg text-muted hover:text-white" title="Export Excel"><FileSpreadsheet size={16} /></button>
               <button onClick={handlePrintReport} className="p-2 bg-card border border-border rounded-lg text-muted hover:text-white" title="Print Report"><Printer size={16} /></button>
-              {hasPermission('vat', 'delete') && (
-                <button onClick={() => {
-                  if (confirm(`Delete ALL ${tab === 'sales' ? 'sales' : 'purchase'} VAT records? This cannot be undone.`)) {
-                    if (confirm('Are you sure?')) {
-                      (tab === 'sales' ? clearVatSales : clearVatPurchases)()
-                    }
+              <button onClick={() => {
+                if (confirm(`Delete ALL ${tab === 'sales' ? 'sales' : 'purchase'} VAT records? This cannot be undone.`)) {
+                  if (confirm('Are you sure?')) {
+                    (tab === 'sales' ? clearVatSales : clearVatPurchases)()
                   }
-                }} className="flex items-center gap-1.5 bg-danger/10 border border-danger/30 text-danger px-3 py-2 rounded-lg text-sm hover:bg-danger/20">
-                  <Trash2 size={15} /> Delete All
+                }
+              }} className="flex items-center gap-1.5 bg-danger/10 border border-danger/30 text-danger px-3 py-2 rounded-lg text-sm hover:bg-danger/20">
+                <Trash2 size={15} /> Delete All
+              </button>
+              <button onClick={() => { setImportType(tab); setImportStep('upload'); setImportModal(true) }}
+                className="flex items-center gap-1.5 bg-card border border-border text-white px-3 py-2 rounded-lg text-sm hover:bg-white/5">
+                <Upload size={15} /> Import CSV
+              </button>
+              <button onClick={() => openAdd(tab === 'sales')}
+                className="flex items-center gap-1.5 bg-primary text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-primary/90">
+                <Plus size={15} /> New {tab === 'sales' ? 'Sales' : 'Purchase'} Record
                 </button>
-              )}
-              {hasPermission('vat', 'create') && (
-                <button onClick={() => { setImportType(tab); setImportStep('upload'); setImportModal(true) }}
-                  className="flex items-center gap-1.5 bg-card border border-border text-white px-3 py-2 rounded-lg text-sm hover:bg-white/5">
-                  <Upload size={15} /> Import CSV
-                </button>
-              )}
-              {hasPermission('vat', 'create') && (
-                <button onClick={() => openAdd(tab === 'sales')}
-                  className="flex items-center gap-1.5 bg-primary text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-primary/90">
-                  <Plus size={15} /> New {tab === 'sales' ? 'Sales' : 'Purchase'} Record
-                </button>
-              )}
             </div>
           </div>
           {renderTable(currentList)}

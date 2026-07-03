@@ -1,5 +1,4 @@
 import { useState, useMemo, useRef } from 'react'
-import { useAuth } from '../context/AuthContext'
 import { useStore } from '../store/useStore'
 import { formatCurrency, formatDate, today } from '../utils/format'
 import { exportToExcel, exportToCSV, printTable } from '../utils/export'
@@ -74,7 +73,6 @@ function calcExpense(form) {
 }
 
 export default function AggregateExpenses() {
-  const { hasPermission } = useAuth()
   const { data, companyData, addAggregateExpense, editAggregateExpense, deleteAggregateExpense,
     addAggregateSupplier, deleteAggregateSupplier,
     addAggregateImportLog } = useStore()
@@ -502,11 +500,9 @@ export default function AggregateExpenses() {
           <button onClick={handleExportExcel} className="p-2 bg-card border border-border rounded-lg text-muted hover:text-white" title="Export Excel"><FileSpreadsheet size={18} /></button>
           <button onClick={handleExportCSV} className="p-2 bg-card border border-border rounded-lg text-muted hover:text-white" title="Export CSV"><Download size={18} /></button>
           <button onClick={handlePrint} className="p-2 bg-card border border-border rounded-lg text-muted hover:text-white" title="Print"><Printer size={18} /></button>
-          {hasPermission('expenses', 'create') && (
-            <button onClick={openAdd} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90">
-              <Plus size={16} /> New Expense
-            </button>
-          )}
+          <button onClick={openAdd} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90">
+            <Plus size={16} /> New Expense
+          </button>
         </div>
       </div>
 
@@ -627,15 +623,9 @@ export default function AggregateExpenses() {
                     <td className="p-3 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button onClick={() => handleView(e)} className="p-1.5 text-muted hover:text-primary" title="View"><Eye size={15} /></button>
-                        {hasPermission('expenses', 'update') && (
-                          <button onClick={() => openEdit(e)} className="p-1.5 text-muted hover:text-primary" title="Edit"><Pencil size={15} /></button>
-                        )}
-                        {hasPermission('expenses', 'delete') && (
-                          <button onClick={() => { if (confirm('Delete this expense?')) deleteAggregateExpense(e.id) }} className="p-1.5 text-muted hover:text-danger" title="Delete"><Trash2 size={15} /></button>
-                        )}
-                        {hasPermission('expenses', 'create') && (
-                          <button onClick={() => handleDuplicate(e)} className="p-1.5 text-muted hover:text-warning" title="Duplicate"><Copy size={15} /></button>
-                        )}
+                        <button onClick={() => openEdit(e)} className="p-1.5 text-muted hover:text-primary" title="Edit"><Pencil size={15} /></button>
+                        <button onClick={() => { if (confirm('Delete this expense?')) deleteAggregateExpense(e.id) }} className="p-1.5 text-muted hover:text-danger" title="Delete"><Trash2 size={15} /></button>
+                        <button onClick={() => handleDuplicate(e)} className="p-1.5 text-muted hover:text-warning" title="Duplicate"><Copy size={15} /></button>
                       </div>
                     </td>
                   </tr>

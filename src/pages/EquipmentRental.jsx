@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react'
-import { useAuth } from '../context/AuthContext'
 import { useStore } from '../store/useStore'
 import { formatCurrency, formatDate, today } from '../utils/format'
 import Modal from '../components/Modal'
@@ -8,7 +7,6 @@ import SummaryCard from '../components/SummaryCard'
 import { Search, Plus, Pencil, Trash2 } from 'lucide-react'
 
 export default function EquipmentRental() {
-  const { hasPermission } = useAuth()
   const { companyData, addEquipmentRental, editEquipmentRental, deleteEquipmentRental } = useStore()
   const items = companyData.equipmentRental || []
   const [search, setSearch] = useState('')
@@ -44,7 +42,7 @@ export default function EquipmentRental() {
         <h1 className="text-2xl font-bold">Equipment Rental</h1>
         <div className="flex items-center gap-2">
           <div className="relative"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" /><input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="w-full sm:w-56 bg-bg border border-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-muted" /></div>
-          {hasPermission('expenses', 'create') && <button onClick={openAdd} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90"><Plus size={16} /> Add Rental</button>}
+          <button onClick={openAdd} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90"><Plus size={16} /> Add Rental</button>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -59,7 +57,7 @@ export default function EquipmentRental() {
               <td className="p-3">{formatDate(i.date)}</td><td className="p-3">{i.equipmentName}</td><td className="p-3">{i.supplierName}</td>
               <td className="p-3 text-right">{i.rentalDays}</td><td className="p-3 text-right">{formatCurrency(i.dailyRate)}</td>
               <td className="p-3 text-right text-danger font-medium">{formatCurrency(i.totalCost)}</td>
-              <td className="p-3 text-center"><div className="flex items-center justify-center gap-2">{hasPermission('expenses', 'update') && <button onClick={() => openEdit(i)} className="p-1.5 text-muted hover:text-primary"><Pencil size={15} /></button>}{hasPermission('expenses', 'delete') && <button onClick={() => { if (confirm('Delete?')) deleteEquipmentRental(i.id) }} className="p-1.5 text-muted hover:text-danger"><Trash2 size={15} /></button>}</div></td>
+              <td className="p-3 text-center"><div className="flex items-center justify-center gap-2"><button onClick={() => openEdit(i)} className="p-1.5 text-muted hover:text-primary"><Pencil size={15} /></button><button onClick={() => { if (confirm('Delete?')) deleteEquipmentRental(i.id) }} className="p-1.5 text-muted hover:text-danger"><Trash2 size={15} /></button></div></td>
             </tr>
           ))}{filtered.length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted">No equipment rentals recorded</td></tr>}</tbody>
         </table>
